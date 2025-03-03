@@ -7,9 +7,23 @@ from line_profiler import profile
 null_gen=np.random.default_rng(0)
 
 def parse_arguments():
+    """
+    Parses command-line arguments for the Gibbs Sampler for Clustering.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
+
+    Command-line arguments:
+        --seed (int): Random seed (default: 0).
+        --data_path (str): Path to the data file (default: 'data.npy').
+        --n_clusters (int): Number of clusters (default: 3).
+        --hot_start (str): Initialize Gibbs sampling with KMeans (default: '1').
+        --n_iter (int): Number of iterations (default: 100).
+        --savepath (str): Path to save the results (default: 'data/gibbs_sampler.npy').
+    """
     parser = argparse.ArgumentParser(description='Gibbs Sampler for Clustering')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
-    parser.add_argument('--data_path', type=str, default='data.npy', help='Path to the data file')
+    parser.add_argument('--data_path', type=str, default='data/data.npy', help='Path to the data file')
     parser.add_argument('--n_clusters', type=int, default=3, help='Number of clusters')
     parser.add_argument('--hot_start', type=str, default='1', help='Initialize Gibbs sampling with KMeans')
     parser.add_argument('--n_iter', type=int, default=100, help='Number of iterations')
@@ -89,7 +103,10 @@ if __name__=='__main__':
             Sigmas.append(np.cov(features[zi==i].T))
     mus=[mus]
     Sigmas=[Sigmas]
-    alpha = [1,2,1.5]
+    alpha = [1,1.5,2,2,2]
+    alpha = alpha[:n_clusters]
+    if args.hot_start=='1':
+        alpha=np.array(alpha)[np.argsort([np.count_nonzero(zi==i) for i in range(n_clusters)])]
     for i in range(args.n_iter):
         pi_=sample_pi(alpha, zi[-1], numpy_randomGen)
         pi=np.vstack([pi, pi_])

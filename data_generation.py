@@ -39,7 +39,7 @@ if __name__=='__main__':
     parser.add_argument('--lambda_', type=float, default=0.025, help='Precision parameter for the multivariate normal distribution')
     parser.add_argument('--S', type=float, default=1, help='Scale matrix for the inverse Wishart distribution (identity matrix scale)')
     parser.add_argument('--nu', type=int, default=5, help='Degrees of freedom for the inverse Wishart distribution')
-    parser.add_argument('--datafile', type=str, default='data', help='Path to save the data file')
+    parser.add_argument('--datafile', type=str, default='data/data', help='Path to save the data file')
     args = parser.parse_args()
 
     alpha = args.alpha
