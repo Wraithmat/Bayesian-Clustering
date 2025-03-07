@@ -14,23 +14,19 @@ def fiducial_values(alpha, mu_0, lambda_, S, nu):
         mus.append(numpy_randomGen.multivariate_normal(mu_0, 1/lambda_*Sigmas[-1]))
     return Pi, mus, Sigmas
 
-def generate_data(mus, Sigmas, K=3, N=[300,300,300]):   
+def generate_data(mus, Sigmas, K=3, assignements=[0]*300+[1]*300+[2]*300):   
     """
     Given the number of clusters and the number of points per clusters, as well as the
     fiducial values of the means and covariance matices, it returns a dataset and its labels
-    """
-
-    labels=np.array([])
-    for i in range(len(N)):
-        labels=np.hstack([labels, np.ones(N[i])*i])    
+    """    
     
-    for i in range(len(N)):
-        samples=numpy_randomGen.multivariate_normal(mus[i], Sigmas[i], N[i])
+    for i in range(len(assignements)):
+        samples=numpy_randomGen.multivariate_normal(mus[assignements[i]], Sigmas[assignements[i]])
         if i!=0:     
             Data=np.vstack([Data,samples])
         else:
             Data=samples
-    return Data, labels
+    return Data
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Generate synthetic data.')
@@ -48,6 +44,6 @@ if __name__=='__main__':
     S = np.eye(len(mu_0)) * args.S
     nu = args.nu
     Pi, mus, Sigmas = fiducial_values(alpha, mu_0, lambda_, S, nu)
-    N=(1000*np.array(Pi)).astype(int)[0]
-    Data, labels = generate_data(mus, Sigmas,N=N)
-    np.save(args.datafile,np.hstack([Data,labels.reshape(-1,1)]), allow_pickle=True)
+    assignements = numpy_randomGen.choice(len(alpha), 1000, p=Pi[0])
+    Data = generate_data(mus, Sigmas, assignements=assignements)
+    np.save(args.datafile,np.hstack([Data,assignements.reshape(-1,1)]), allow_pickle=True)
