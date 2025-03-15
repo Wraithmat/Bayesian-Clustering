@@ -34,8 +34,11 @@ def compute_likelihood(data, N_clusters, N_dim, params):
     Sigmas=params[N_clusters*N_dim:N_clusters*N_dim+N_clusters*N_dim**2].reshape(N_clusters,N_dim,N_dim)
     zi=params[N_clusters*N_dim+N_clusters*N_dim**2+N_clusters:].astype(int)
     likelihood=0
-    for i in range(len(data)):
-        likelihood+=np.log(multivariate_normal.pdf(data[i], mean=mus[zi[i]], cov=Sigmas[zi[i]]))
+    #for i in range(len(data)):
+    #    likelihood+=np.log(multivariate_normal.pdf(data[i], mean=mus[zi[i]], cov=Sigmas[zi[i]]))
+    for i in range(N_clusters):
+        likelihood+=np.sum(np.log(multivariate_normal.pdf(data[zi==i], mean=mus[i], cov=Sigmas[i])))
+
     return likelihood
 
 def _update(L, alpha, mu_0, lambda_, S, nu, N_clusters, N_dim, data, max_rep=100, random_generator=null_Gen):
