@@ -63,7 +63,7 @@ def harmonic_mean(log_likelihoods):
     h_mean = len(log_likelihoods)/mp.fsum(neg_vec_exp(log_likelihoods))
     return h_mean, mp.log(h_mean)
 
-def arithmethic_average_error(log_likelihoods):
+def arithmethic_average_error(log_likelihoods, log_avg=False):
     """
     It returns the arithmetic average and an error estimate computed with the use of block analysis.
     Notice: the log results should not be considered as unbiased estimates, they are returned only for computational purposes.
@@ -71,22 +71,28 @@ def arithmethic_average_error(log_likelihoods):
 
     Output: (avg, standard deviation of the average), (logavg, logblock_err)
     """
-
-    avg, logavg = arithmethic_average(log_likelihoods)
+    if log_avg:
+        avg = mp.fsum(log_likelihoods)/len(log_likelihoods)
+        logavg = mp.log(avg)
+    else:
+        avg, logavg = arithmethic_average(log_likelihoods)
     autocorr_times = autocorr2(log_likelihoods)
     
     for thr in np.arange(0.1,0.9,0.1):
         try:
             autocorr=np.argmax(autocorr_times<thr)
             block_sizes = np.unique(np.linspace(autocorr,len(log_likelihoods)/5, dtype=int))
-            _, _, block_err, _ = block_error(vec_exp(log_likelihoods), block_sizes, inv_sigma_average=True)
+            if log_avg:
+                _, _, block_err, _ = block_error(log_likelihoods, block_sizes, inv_sigma_average=True)
+            else:
+                _, _, block_err, _ = block_error(vec_exp(log_likelihoods), block_sizes, inv_sigma_average=True)
             block_err_std = block_err*((len(log_likelihoods)-1)/2)**0.5*mp.exp(mp.loggamma(0.5*(len(log_likelihoods)-1))-mp.loggamma(0.5*len(log_likelihoods)))
             
-            return (avg, block_err_std), (logavg, mp.log(block_err_std)), (block_err, mp.log(block_err)) 
+            return (avg, block_err_std), (logavg, mp.log(block_err_std)), (block_err**2, mp.log(block_err**2)) 
         except:
             continue
-    
-    return (avg, 0), (logavg, 0)
+    print('The block analysis did not converge')
+    return (avg, 0), (logavg, 0), (0, 0)
 
 def harmonic_mean_thinningerror(log_likelihoods, min_pt=20):
     """
@@ -179,7 +185,7 @@ def th_integration_error(log_z_beta, var_log_z, betas):
     integral=mp.fsum(a*log_z_beta)
     var=mp.fsum(a**2*var_log_z)
 
-    return (integral, var), (mp.log(integral), mp.log(var))
+    return (integral, var)
 
 def stepping_stone_error(rk, var_rk):
     """
@@ -191,7 +197,7 @@ def stepping_stone_error(rk, var_rk):
     z=mp.fprod(rk)
     log_z = mp.fsum(vec_log(rk))
 
-    var_z = mp.fprod(var_rk+rk**2)-mp.prod(rk)**2
+    var_z = mp.fprod(var_rk+rk**2)-mp.fprod(rk)**2
 
     return (z, var_z), (log_z, mp.log(var_z))
 
@@ -465,10 +471,13 @@ class DiffusionGibbs:
         return (pi_[1:], zi_[1:], mus_[1:], Sigmas_[1:], loglikelihood)
     
 
-    def parallel_diffusion_gibbs(self, betas=None, n_gibbs_iter=10, n_jobs=4, n_chains=10):
+    def parallel_diffusion_gibbs(self, betas=None, n_gibbs_iter=10, n_jobs=4, n_chains=10, n_iter=None):
         """
         Parallel version of the diffusion gibbs sampler.
         """
+        if not(n_iter is None):
+            self.n_iter=n_iter
+
         if betas is None:
             betas=np.linspace(0,1,n_chains)**(1/0.3)
         betas=np.sort(betas)
@@ -550,11 +559,18 @@ class DiffusionGibbs:
             dictionary['loglikelihood_%.7f'%betas[i]]=dictionary['loglikelihood_%.7f'%betas[i]]+results[i][4]
         return dictionary
     
-    def compute_evidence(self, betas=None, n_gibbs_iter=10, n_jobs=4, n_chains=10):
+    def compute_evidence(self, betas=None, n_gibbs_iter=10, n_jobs=4, n_chains=10, n_iter=None, burnin=None):
         """
         Parallel version of the diffusion gibbs sampler that does not store all the samples of mus, Sigmas and pi (it still keeps the log likelihoods).
         This should be useful for memory purposes.
+        If burnin is setted, only the samples after the burnin will be considered for the estimation of the evidences.
         """
+        if not(n_iter is None):
+            self.n_iter=n_iter
+
+        if burnin is None:
+            burnin=self.n_iter*n_gibbs_iter//5
+
         if betas is None:
             betas=np.linspace(0,1,n_chains)**(1/0.3)
         betas=np.sort(betas)
@@ -584,8 +600,11 @@ class DiffusionGibbs:
             else:
                 dictionary=self._MH_step(dictionary, betas, 1)
 
+        dict_output={'loglikelihood_%.7f'%i:dictionary['loglikelihood_%.7f'%i] for i in betas}
+
         for i in betas:
-            dictionary['loglikelihood_%.7f'%i]=np.array(dictionary['loglikelihood_%.7f'%i])
+            dictionary['loglikelihood_%.7f'%i]=np.array(dictionary['loglikelihood_%.7f'%i][burnin:])
+            dictionary['loglikelihood_%.7f'%i]=np.array(dictionary['loglikelihood_%.7f'%i][dictionary['loglikelihood_%.7f'%i]!=mp.mpf('-inf')])
 
         if 0 in betas:
             (z_avg, z_avg_error), (log_z_avg, log_z_avg_error), (var_z_avg, log_var_zavg) = arithmethic_average_error(dictionary['loglikelihood_%.7f'%0])
@@ -597,11 +616,11 @@ class DiffusionGibbs:
         thermodynamic_averages = []
         thermodynamic_averages_error = []
         for i in betas:
-            (z__,z__std), (log_z, log_z_std), (z__var, log_z_var)=arithmethic_average_error(dictionary['loglikelihood_%.7f'%i])
+            (z__,z__std), (log_z, log_z_std), (z__var, log_z_var)=arithmethic_average_error(dictionary['loglikelihood_%.7f'%i], log_avg=True)
             thermodynamic_averages.append(z__)
             thermodynamic_averages_error.append(z__var)
-        th_int_res, log_th_int = th_integration_error(thermodynamic_averages, thermodynamic_averages_error, betas)
-        print('Using thermodynamic integration we get the following results:', th_int_res, log_th_int)
+        th_int_res = th_integration_error(thermodynamic_averages, thermodynamic_averages_error, betas)
+        print('Using thermodynamic integration we get the following results:', th_int_res)
 
         r_k=[]
         var_rk=[]
@@ -609,9 +628,9 @@ class DiffusionGibbs:
             (z_rk,z__std_rk), (log_z_rk, log_z_std_rk), (z__var_rk, log_z_var_rk)=arithmethic_average_error(dictionary['loglikelihood_%.7f'%betas[i-1]]*(betas[i]-betas[i-1]))
             r_k.append(z_rk)
             var_rk.append(z__var_rk)
+        r_k=np.array(r_k)
+        var_rk=np.array(var_rk)
         stepping_stone_res, log_stepping_stone = stepping_stone_error(r_k, var_rk)
         print('Using the stepping stone method we get the following results:', stepping_stone_res, log_stepping_stone)
-
-        dict_output={'loglikelihood_%.7f'%i:dictionary['loglikelihood_%.7f'%i] for i in betas}
         
-        return dict_output, (log_z_avg, log_z_avg_error), (log_zhm, log_zhm_var), (log_rho, log_var_rho), log_th_int, log_stepping_stone
+        return dict_output, (log_z_avg, log_z_avg_error), (log_zhm, log_zhm_var), (log_rho, log_var_rho), th_int_res, log_stepping_stone
