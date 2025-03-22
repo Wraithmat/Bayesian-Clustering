@@ -10,7 +10,7 @@ from tqdm import tqdm
 null_gen=np.random.default_rng(0)
 
 class DPSampler:
-    def __init__(self, data, alpha=[1], mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100):
+    def __init__(self, data, alpha=np.array([1]), mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100):
         '''
         data: np.array of shape (N, D)
         alpha, mu_0, lambda_, S, nu: hyperparameters
