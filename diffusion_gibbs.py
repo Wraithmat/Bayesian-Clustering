@@ -202,7 +202,7 @@ def stepping_stone_error(rk, var_rk):
     return (z, var_z), (log_z, mp.log(var_z))
 
 class DiffusionGibbs:
-    def __init__(self, data, alpha=[1], mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100):
+    def __init__(self, data, alpha=[1], mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100, allow_singular=False):
         '''
         data: np.array of shape (N, D)
         alpha, mu_0, lambda_, S, nu: hyperparameters
@@ -212,6 +212,7 @@ class DiffusionGibbs:
         n_clusters_0: number of clusters for initialization
         '''
         
+        self.allow_singular=allow_singular
         self.seed=seed
         self.data=data
         self.hot_start=hot_start
@@ -239,7 +240,10 @@ class DiffusionGibbs:
             self.mus=kmeans.cluster_centers_
             self.Sigmas=[]
             for i in range(self.n_clusters):
-                self.Sigmas.append(np.cov(self.data[self.zi==i].T))
+                if np.sum(self.zi==i)>=5:
+                    self.Sigmas.append(np.cov(self.data[self.zi==i].T))
+                else:
+                    self.Sigmas.append(invwishart.rvs(self.nu, self.S, random_state=self.numpy_randomGen))
         else:
             if len(self.alpha)==1:
                 self.pi=self.numpy_randomGen.dirichlet(self.alpha*np.ones(self.n_clusters)/self.n_clusters)
@@ -249,10 +253,16 @@ class DiffusionGibbs:
             self.mus=[]
             self.Sigmas=[]
             for i in range(self.n_clusters):
-                try:
-                    self.mus.append(self.numpy_randomGen.multivariate_normal(np.mean(self.data[self.zi==i], axis=0), np.cov(self.data[self.zi==i].T)))
-                    self.Sigmas.append(np.cov(self.data[self.zi==i].T))
-                except:
+                if np.sum(self.zi==i)>=5:
+                    try:
+                        self.mus.append(self.numpy_randomGen.multivariate_normal(np.mean(self.data[self.zi==i], axis=0), np.cov(self.data[self.zi==i].T)))
+                        self.Sigmas.append(np.cov(self.data[self.zi==i].T))
+                        if self.Sigmas[-1].shape!=(self.D,self.D):
+                            raise ValueError
+                    except:
+                        self.Sigmas.append(invwishart.rvs(self.nu, self.S, random_state=self.numpy_randomGen))
+                        self.mus.append(self.numpy_randomGen.multivariate_normal(self.mu_0, 1/self.lambda_*self.Sigmas[-1]))
+                else:
                     self.Sigmas.append(invwishart.rvs(self.nu, self.S, random_state=self.numpy_randomGen))
                     self.mus.append(self.numpy_randomGen.multivariate_normal(self.mu_0, 1/self.lambda_*self.Sigmas[-1]))
             self.mus=np.array(self.mus)
@@ -277,7 +287,7 @@ class DiffusionGibbs:
             numpy_randomGen=self.numpy_randomGen
         p_z=np.zeros((len(features), len(mus)))
         for j in range(len(mus)):
-            p_z[:,j]=(Pi[j]*(multivariate_normal.pdf(features, mean=mus[j], cov=Sigmas[j])**beta))
+            p_z[:,j]=(Pi[j]*(multivariate_normal.pdf(features, mean=mus[j], cov=Sigmas[j], allow_singular=self.allow_singular)**beta))
         p_z=p_z/np.sum(p_z, axis=1)[:,None]
         z=(p_z.cumsum(1)>numpy_randomGen.random((len(features)))[:,None]).argmax(1)
         return z
@@ -316,7 +326,7 @@ class DiffusionGibbs:
         
         for i in range(self.n_clusters):
             if np.sum(zi==i)!=0:
-                l_likelihood+=mp.fsum(vec_log((multivariate_normal.pdf(self.data[zi==i], mean=mus[i], cov=Sigmas[i])).reshape(-1)))
+                l_likelihood+=mp.fsum(vec_log((multivariate_normal.pdf(self.data[zi==i], mean=mus[i], cov=Sigmas[i], allow_singular=self.allow_singular)).reshape(-1)))
         return l_likelihood
 
     

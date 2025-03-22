@@ -17,6 +17,7 @@ In order to start exploring the repository, you can check **tutorial.ipynb** and
 - **Dirichlet_sampling.py**: Contains the class for analyzing the Dirichlet Process.
 - **bilby_sampler.py**: An implementation using the `bilby` library. Note: The use of a NIW prior significantly slows down this method.
 - **nested_sampling.py**: An implementation of nested sampling with the rejection scheme and stopping criteria.
+- **Sensitivity_analysis.py** and **Bayes_factor.py** contain some code to compute Bayes factors and their errors.
 
 ### Directory Overview
 - **data/**: Contains generated datasets.

@@ -4,6 +4,7 @@
 *.png
 *.pdf
 *.gif
+Small_dataset.ipynb
 Check_2.ipynb
 Unsaved*
 __pycache__
