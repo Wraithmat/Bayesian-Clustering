@@ -31,5 +31,17 @@ In order to start exploring the repository, you can check **tutorial.ipynb** and
 - The `diffusion_gibbs.py` and `Dirichlet_sampling.py` modules are designed for flexibility and can be adapted for further applications.
 - The `bilby_sampler` gives troubles because of the N
 
+## Some references
+Part of the code is inspired by
+- F. Feroz, M.P. Hobson and M. Bridges, “MULTINEST: an efficient and robust Bayesian inference tool for cosmology and particle physics". Mon. Not. R. Astron. Soc., 2008​
+- Patricio M. R. , et al. “The stepping-stone sampling algorithm for calculating the evidence of gravitational wave models”, 2018​
+- Wangang Xie, et al. “Improving Marginal Likelihood Estimation for Bayesian Phylogenetic Model Selection”, Syst. Biol. 60(2):150-160, 2011​
+- Radford M. Neal, “Sampling from multimodal distributions using tempered transitions”, Statistics and Computing (1996)​
+- Jason D. McEwen, et al., “Machine learning assisted Bayesian model comparison: learnt harmonic mean estimator”, 2023​
+- Flyvbjerg et al., “Error estimates on averages of correlated data”, J. Chem. Phys. 91, 461–466 (1989)​
+- Wolff, Ulli (1989-01-23). "Collective Monte Carlo Updating for spin Systems". Physical Review Letters
+- Ashton, Gregory and others, "BILBY: A user-friendly Bayesian inference library for gravitational-wave astronomy", Astrophys. J. Suppl.    ​
+
 ## 📄 License
 This project is licensed.
+
