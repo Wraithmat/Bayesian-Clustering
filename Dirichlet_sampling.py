@@ -10,7 +10,7 @@ from tqdm import tqdm
 null_gen=np.random.default_rng(0)
 
 class DPSampler:
-    def __init__(self, data, alpha=1, mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100):
+    def __init__(self, data, alpha=[1], mu_0=np.zeros(2), lambda_=0.025, S=np.eye(2), nu=5, true_labels=None, seed=0, hot_start=0, n_clusters_0=3, n_iter=100):
         '''
         data: np.array of shape (N, D)
         alpha, mu_0, lambda_, S, nu: hyperparameters
@@ -51,7 +51,7 @@ class DPSampler:
             for i in range(self.n_clusters):
                 self.Sigmas.append(np.cov(self.data[self.zi==i].T))
         else:
-            if self.len(self.alpha)==1:
+            if len(self.alpha)==1:
                 self.pi=self.numpy_randomGen.dirichlet(self.alpha*np.ones(self.n_clusters)/self.n_clusters)
             else:
                 self.pi=self.numpy_randomGen.dirichlet(self.alpha)
@@ -140,6 +140,8 @@ class DPSampler:
                 else:
                     groups[f"mu_{i}"]=np.vstack([groups[f"mu_{i}"],self.mus[i]])
                     groups[f"Sigma_{i}"]=np.concatenate([groups[f"Sigma_{i}"],self.Sigmas[i].reshape(1,2,2)], axis=0)
-            
+    
         if filename!=None:
             np.save(filename, groups)
+        else:
+            return groups
