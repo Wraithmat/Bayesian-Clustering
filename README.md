@@ -18,6 +18,7 @@ In order to start exploring the repository, you can check **tutorial.ipynb** and
 - **bilby_sampler.py**: An implementation using the `bilby` library. Note: The use of a NIW prior significantly slows down this method.
 - **nested_sampling.py**: An implementation of nested sampling with the rejection scheme and stopping criteria.
 - **Sensitivity_analysis.py** and **Bayes_factor.py** contain some code to compute Bayes factors and their errors.
+- **gibbs_sampler.py**: a plain and simple implementation of gibbs sampling, used to profile and optimize the functions.
 
 ### Directory Overview
 - **data/**: Contains generated datasets.
